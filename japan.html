@@ -58,7 +58,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 4px 0 8px;
+            padding: 4px 0 6px;
             border-bottom: 1px solid #f1f5f9;
             gap: 8px;
         }
@@ -73,17 +73,6 @@
             font-size: 16px;
             font-weight: 700;
             color: #0f172a;
-            white-space: nowrap;
-        }
-
-        .badge-count {
-            font-size: 11px;
-            font-weight: 600;
-            background: #eff6ff;
-            color: #2563eb;
-            padding: 2px 7px;
-            border-radius: 12px;
-            border: 1px solid #dbeafe;
             white-space: nowrap;
         }
 
@@ -124,9 +113,80 @@
             color: #d97706;
         }
 
+        /* 題庫切換橫列 (可下拉選 100/200/或新上傳檔案) */
+        .bank-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 10px;
+            padding: 6px 10px;
+            margin: 6px 0 4px;
+            gap: 8px;
+        }
+
+        .bank-select-box {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .bank-select {
+            flex: 1;
+            max-width: 175px;
+            padding: 4px 6px;
+            border: 1.5px solid #86efac;
+            border-radius: 6px;
+            background: #ffffff;
+            font-size: 13px;
+            font-weight: 600;
+            color: #166534;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .icon-btn-sm {
+            border: 1px solid #cbd5e1;
+            background: white;
+            border-radius: 6px;
+            padding: 4px 7px;
+            cursor: pointer;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .icon-btn-sm:active {
+            transform: scale(0.92);
+        }
+
+        .badge-count {
+            font-size: 11px;
+            font-weight: 600;
+            background: #dcfce7;
+            color: #15803d;
+            padding: 2px 7px;
+            border-radius: 12px;
+            border: 1px solid #bbf7d0;
+            white-space: nowrap;
+        }
+
+        .spinning {
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
         /* 可折疊之進階設定面板 (預設收合，不佔手機高度) */
         .settings-details {
-            margin: 6px 0;
+            margin: 4px 0 6px;
             background: #f8fafc;
             border-radius: 10px;
             border: 1px solid #e2e8f0;
@@ -135,7 +195,7 @@
         }
 
         .settings-summary {
-            padding: 8px 12px;
+            padding: 7px 12px;
             font-weight: 600;
             color: #64748b;
             cursor: pointer;
@@ -208,7 +268,7 @@
             border: 1px solid #e2e8f0;
             border-radius: 12px;
             padding: 10px 12px;
-            margin: 6px 0 8px;
+            margin: 4px 0 8px;
             position: relative;
         }
 
@@ -237,7 +297,7 @@
         }
 
         .text-display-area {
-            min-height: 72px;
+            min-height: 70px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -535,8 +595,7 @@
     <!-- 頂部 Header -->
     <header class="app-header">
         <div class="header-title-box">
-            <span class="header-title">🇯🇵 日文聽力</span>
-            <span id="lbl_count" class="badge-count">讀取中...</span>
+            <span class="header-title">🇯🇵 日文聽力練習</span>
         </div>
         <div class="header-actions">
             <!-- 隱藏原生 checkbox，使用按鈕同步控制 -->
@@ -546,17 +605,30 @@
         </div>
     </header>
 
+    <!-- 題庫切換橫列 (自動掃描 GitHub & 下拉切換 100/200/更多) -->
+    <div class="bank-bar">
+        <div class="bank-select-box">
+            <span style="font-size: 12px; font-weight: 700; color: #166534; white-space: nowrap;">📚 題庫:</span>
+            <select id="select_bank" class="bank-select" onchange="onBankSelectionChange(this.value)">
+                <option value="n5_200.json">n5_200.json</option>
+                <option value="n5_100.json">n5_100.json</option>
+            </select>
+            <button class="icon-btn-sm" id="btn_refresh_bank" onclick="scanAvailableBanks(true)" title="從 GitHub 重新掃描最新題庫檔">🔄</button>
+        </div>
+        <span id="lbl_count" class="badge-count">讀取中...</span>
+    </div>
+
     <!-- 可收合設定與題庫管理面板 -->
     <details class="settings-details" id="settings_panel">
         <summary class="settings-summary">
-            <span>⚙️ 題庫管理 & 設定</span>
+            <span>⚙️ 進階管理 & API設定</span>
             <span id="lbl_status" style="font-size: 11px; color: #2563eb; font-weight: normal;">🤖 系統就緒</span>
         </summary>
         <div class="settings-content">
             <div class="settings-row">
-                <button class="btn-sm btn-green" onclick="reloadDefaultBank()">🔄 重新載入 215 題庫</button>
+                <button class="btn-sm btn-green" onclick="reloadCurrentBank()">🔄 重載當前題庫</button>
                 <label class="btn-sm btn-gray" style="cursor: pointer; display: inline-flex; align-items: center;">
-                    📁 匯入題庫 (JSON)
+                    📁 匯入題庫 (.json)
                     <input type="file" id="file_import" accept=".json" style="display: none;" onchange="handleFileImport(this)">
                 </label>
                 <button class="btn-sm btn-orange" onclick="clearOldCache()">重設快取</button>
@@ -625,10 +697,12 @@
 </div>
 
 <script>
+    const GITHUB_REPO = "cyok73/japan";
     var DEFAULT_KEY = "AQ.Ab8RN6JmZTDdC8MEhGGGw5qFdgo_GBil3NBNvRYYzVejpyRywg";
     var questions = [], currentQuestion = null, answeredCount = 0, currentTabIdx = 0, aiIsRunning = false;
     var isAnswered = false;
     var availableVoices = [];
+    var availableBanks = ["n5_200.json", "n5_100.json"];
 
     const TOPICS = [
         "超商或超市購物（問袋子、加熱、找零、會員卡）",
@@ -671,6 +745,108 @@
         }
     ];
 
+    // 自動從 GitHub 倉庫掃描所有 .json 題庫檔案
+    async function scanAvailableBanks(manual = false) {
+        const refreshBtn = document.getElementById('btn_refresh_bank');
+        if (refreshBtn) refreshBtn.classList.add('spinning');
+
+        try {
+            const resp = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents?t=` + Date.now(), {
+                headers: { 'Accept': 'application/vnd.github.v3+json' }
+            });
+            if (resp.ok) {
+                const files = await resp.json();
+                if (Array.isArray(files)) {
+                    const jsonFiles = files
+                        .map(f => f.name)
+                        .filter(name => name.endsWith('.json') && !name.startsWith('package') && !name.startsWith('vercel'));
+                    
+                    if (jsonFiles.length > 0) {
+                        availableBanks = Array.from(new Set([...jsonFiles, ...availableBanks]));
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("GitHub API 掃描異常:", e);
+        } finally {
+            if (refreshBtn) refreshBtn.classList.remove('spinning');
+        }
+
+        renderBankSelect();
+        if (manual) {
+            alert(`✅ 題庫掃描完成！目前共有 ${availableBanks.length} 個題庫檔案可供切換。`);
+        }
+    }
+
+    function renderBankSelect() {
+        const sel = document.getElementById('select_bank');
+        if (!sel) return;
+        const currentFile = localStorage.getItem('selected_bank_file') || 'n5_200.json';
+        sel.innerHTML = '';
+        availableBanks.forEach(file => {
+            const opt = document.createElement('option');
+            opt.value = file;
+            opt.textContent = `📁 ${file}`;
+            if (file === currentFile) opt.selected = true;
+            sel.appendChild(opt);
+        });
+    }
+
+    async function onBankSelectionChange(filename) {
+        if (!filename) return;
+        await loadSpecificBank(filename, true);
+    }
+
+    async function loadSpecificBank(filename, showAlert = false) {
+        updateStatus(`⏳ 載入 ${filename}...`, "#3b82f6");
+        try {
+            // 優先從 Vercel 同目錄讀取，附帶 timestamp 破除瀏覽器快取
+            let resp = await fetch(filename + '?t=' + Date.now());
+            if (!resp.ok) {
+                // 備援：若 Vercel 尚未部署完，直接由 GitHub Raw 讀取最新版
+                resp = await fetch(`https://raw.githubusercontent.com/${GITHUB_REPO}/main/${filename}?t=` + Date.now());
+            }
+            if (!resp.ok) throw new Error("HTTP " + resp.status);
+            
+            const text = await resp.text();
+            if (!text || !text.trim()) {
+                throw new Error("此題庫檔案目前內容為空，請先將題目放入檔案內！");
+            }
+
+            const data = JSON.parse(text);
+            if (Array.isArray(data) && data.length > 0) {
+                questions = data;
+                currentQuestion = null;
+                answeredCount = 0;
+                localStorage.setItem('jp_questions', JSON.stringify(questions));
+                localStorage.setItem('selected_bank_file', filename);
+                updateStatus(`📚 ${filename} 已就緒`, "#10b981");
+                renderBankSelect();
+                updateCounterBadge();
+                nextQuestion();
+                if (showAlert) alert(`✅ 成功切換到【${filename}】！共載入 ${questions.length} 題。`);
+                return true;
+            } else {
+                throw new Error("檔案格式不正確，必須是題目陣列！");
+            }
+        } catch (err) {
+            console.error("載入題庫失敗:", err);
+            updateStatus(`⚠️ ${filename} 載入失敗`, "#ef4444");
+            if (showAlert) {
+                alert(`⚠️ 無法載入【${filename}】：\n${err.message || '檔案可能尚未上傳內容或格式有誤'}\n系統將保留目前題庫。`);
+            }
+            const currentFile = localStorage.getItem('selected_bank_file') || 'n5_200.json';
+            const sel = document.getElementById('select_bank');
+            if (sel) sel.value = currentFile;
+            return false;
+        }
+    }
+
+    async function reloadCurrentBank() {
+        const currentFile = localStorage.getItem('selected_bank_file') || 'n5_200.json';
+        await loadSpecificBank(currentFile, true);
+    }
+
     function updateStatus(text, color) {
         const lbl = document.getElementById('lbl_status');
         if (lbl) {
@@ -693,45 +869,6 @@
         }
     }
 
-    async function loadQuestionsFromSource(forceReload = false) {
-        // 1. 優先檢查是否由 n5_200.js 注入 window.EMBEDDED_QUESTIONS
-        const source = (typeof window !== 'undefined' && window.EMBEDDED_QUESTIONS) ? window.EMBEDDED_QUESTIONS : null;
-        if (source && Array.isArray(source) && source.length > 0) {
-            questions = [...source];
-            localStorage.setItem('jp_questions', JSON.stringify(questions));
-            updateStatus(`📚 內建題庫已載入`, "#10b981");
-            return true;
-        }
-
-        // 2. 透過 fetch 讀取同目錄下的 n5_200.json
-        try {
-            const resp = await fetch('n5_200.json');
-            if (resp.ok) {
-                const data = await resp.json();
-                if (Array.isArray(data) && data.length > 0) {
-                    questions = data;
-                    localStorage.setItem('jp_questions', JSON.stringify(questions));
-                    updateStatus(`📚 n5_200.json 已載入`, "#10b981");
-                    return true;
-                }
-            }
-        } catch (err) {
-            console.warn("無法透過 fetch 讀取 n5_200.json:", err);
-        }
-
-        return false;
-    }
-
-    async function reloadDefaultBank() {
-        const ok = await loadQuestionsFromSource(true);
-        if (ok) {
-            nextQuestion();
-            alert(`✅ 成功載入完整題庫！共 ${questions.length} 題。`);
-        } else {
-            alert("⚠️ 載入失敗，請確認 n5_200.json 或 n5_200.js 檔案是否存在於同目錄。您也可以點選「📁 匯入題庫」手動選取檔案。");
-        }
-    }
-
     function handleFileImport(input) {
         const file = input.files[0];
         if (!file) return;
@@ -741,10 +878,18 @@
                 const data = JSON.parse(e.target.result);
                 if (Array.isArray(data) && data.length > 0) {
                     questions = data;
+                    currentQuestion = null;
+                    answeredCount = 0;
                     localStorage.setItem('jp_questions', JSON.stringify(questions));
-                    updateStatus(`📚 已匯入自訂題庫`, "#10b981");
+                    localStorage.setItem('selected_bank_file', file.name);
+                    
+                    if (!availableBanks.includes(file.name)) {
+                        availableBanks.unshift(file.name);
+                    }
+                    renderBankSelect();
+                    updateStatus(`📚 已匯入 ${file.name}`, "#10b981");
                     nextQuestion();
-                    alert(`✅ 成功匯入題庫！共 ${questions.length} 道題目。`);
+                    alert(`✅ 成功匯入題庫【${file.name}】！共 ${questions.length} 道題目。`);
                 } else {
                     alert("⚠️ 格式錯誤：JSON 內容必須是題目陣列！");
                 }
@@ -757,9 +902,10 @@
     }
 
     async function clearOldCache() {
-        if (confirm("是否清空舊題庫快取並重新載入？")) {
+        const currentFile = localStorage.getItem('selected_bank_file') || 'n5_200.json';
+        if (confirm(`是否清空舊快取，並重新從「${currentFile}」載入題目？`)) {
             localStorage.removeItem('jp_questions');
-            const ok = await loadQuestionsFromSource(true);
+            const ok = await loadSpecificBank(currentFile, false);
             if (!ok) {
                 questions = [...FALLBACK_QUESTIONS];
                 localStorage.setItem('jp_questions', JSON.stringify(questions));
@@ -817,7 +963,13 @@
         const savedKey = localStorage.getItem('user_gemini_key');
         if (savedKey) document.getElementById('input_api_key').value = savedKey;
 
-        // 讀取 localStorage 快取
+        // 1. 自動從 GitHub 掃描所有可用的題庫檔案 (n5_100.json, n5_200.json 等)
+        await scanAvailableBanks(false);
+
+        // 2. 獲取上次選中的題庫檔名，預設 n5_200.json
+        const currentFile = localStorage.getItem('selected_bank_file') || 'n5_200.json';
+
+        // 3. 讀取 localStorage 快取
         let localData = null;
         try {
             const raw = localStorage.getItem('jp_questions');
@@ -826,19 +978,26 @@
             localData = null;
         }
 
-        // 如果快取為空或只有舊的 <= 2 題，自動載入完整題庫
         if (Array.isArray(localData) && localData.length > 2) {
             questions = localData;
-            updateStatus(`📚 題庫就緒`, "#10b981");
+            updateStatus(`📚 ${currentFile} 就緒`, "#10b981");
         } else {
-            const loaded = await loadQuestionsFromSource();
+            const loaded = await loadSpecificBank(currentFile, false);
             if (!loaded) {
-                questions = (Array.isArray(localData) && localData.length > 0) ? localData : [...FALLBACK_QUESTIONS];
-                localStorage.setItem('jp_questions', JSON.stringify(questions));
-                updateStatus(`⚠️ 使用備用題庫`, "#f59e0b");
+                // 備援：若指定的檔案失敗，嘗試載入 n5_200.json 備援
+                if (typeof window !== 'undefined' && window.EMBEDDED_QUESTIONS) {
+                    questions = [...window.EMBEDDED_QUESTIONS];
+                    localStorage.setItem('jp_questions', JSON.stringify(questions));
+                    updateStatus(`📚 內建題庫已載入`, "#10b981");
+                } else {
+                    questions = [...FALLBACK_QUESTIONS];
+                    localStorage.setItem('jp_questions', JSON.stringify(questions));
+                    updateStatus(`⚠️ 使用備用題庫`, "#f59e0b");
+                }
             }
         }
 
+        renderBankSelect();
         switchTab(0);
         setTimeout(() => { bindKeyboardEvents(); }, 50);
         nextQuestion();
