@@ -971,55 +971,58 @@
     }
 
     function loadVoices() {
-        if (!('speechSynthesis' in window)) return;
-        const voices = window.speechSynthesis.getVoices();
-        availableVoices = voices.filter(v => v.lang.startsWith('ja') || v.lang === 'ja_JP' || v.lang === 'ja-JP');
         const select = document.getElementById('voice_select');
         if (!select) return;
         select.innerHTML = '';
 
-        if (availableVoices.length === 0) {
-            select.innerHTML = '<option value="">🇯🇵 系統日語</option>';
-            return;
+        // 1. 始終置頂超清晰「Google 真人自然日語」（全手機通用，免設定）
+        const optGoogle = document.createElement('option');
+        optGoogle.value = 'google';
+        optGoogle.textContent = '🌟 Google 真人語音 (最自然)';
+        select.appendChild(optGoogle);
+
+        // 2. 「手機預設 / Siri 增強語音」（不綁定舊機械音，自動套用 iPhone/Android 最新設定）
+        const optSystem = document.createElement('option');
+        optSystem.value = 'system';
+        optSystem.textContent = '📱 手機預設 / Siri 語音';
+        select.appendChild(optSystem);
+
+        if ('speechSynthesis' in window) {
+            const voices = window.speechSynthesis.getVoices();
+            availableVoices = voices.filter(v => v.lang.startsWith('ja') || v.lang === 'ja_JP' || v.lang === 'ja-JP');
+
+            availableVoices.forEach((voice, index) => {
+                const option = document.createElement('option');
+                option.value = String(index);
+                let displayName = voice.name
+                    .replace(/Microsoft |Google |Online \(Natural\) - |Apple |Siri /g, '')
+                    .replace(/Japanese \(Japan\)|ja-JP/gi, '')
+                    .trim();
+                if (!displayName) displayName = `裝置語音 ${index + 1}`;
+                option.textContent = `🗣️ ${displayName}`;
+                select.appendChild(option);
+            });
         }
 
-        const savedVoiceName = localStorage.getItem('selected_voice_name');
-        let matchedIndex = -1;
-
-        availableVoices.forEach((voice, index) => {
-            const option = document.createElement('option');
-            option.value = index;
-            // 清理手機端顯示名稱，更精簡好辨識
-            let displayName = voice.name
-                .replace(/Microsoft |Google |Online \(Natural\) - |Apple |Siri /g, '')
-                .replace(/Japanese \(Japan\)|ja-JP/gi, '')
-                .trim();
-            if (!displayName) displayName = `語音 ${index + 1}`;
-            option.textContent = `🗣️ ${displayName}`;
-
-            if (savedVoiceName && voice.name === savedVoiceName) {
-                matchedIndex = index;
-            } else if (matchedIndex === -1 && (voice.name.includes('Natural') || voice.name.includes('Online') || voice.name.includes('Kyoko') || voice.name.includes('Siri'))) {
-                matchedIndex = index;
+        const savedChoice = localStorage.getItem('selected_voice_choice') || 'google';
+        for (let i = 0; i < select.options.length; i++) {
+            if (select.options[i].value === savedChoice) {
+                select.selectedIndex = i;
+                break;
             }
-            select.appendChild(option);
-        });
-
-        if (matchedIndex !== -1) {
-            select.selectedIndex = matchedIndex;
         }
     }
 
     function onVoiceChange() {
         const select = document.getElementById('voice_select');
-        if (select && select.value !== "" && availableVoices[select.value]) {
-            localStorage.setItem('selected_voice_name', availableVoices[select.value].name);
+        if (select) {
+            localStorage.setItem('selected_voice_choice', select.value);
             // 變更語音時立即試聽當前句子
             playAudio();
         }
     }
 
-    if (window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis.onvoiceschanged !== undefined) {
         window.speechSynthesis.onvoiceschanged = loadVoices;
     }
 
@@ -1263,26 +1266,63 @@
         });
     }
 
+    let currentAudioEl = null;
+
     function playAudio() {
         if (!currentQuestion) return;
+        stopAudio();
+
+        const textToSpeak = currentQuestion.kanji || currentQuestion.kana;
+        const select = document.getElementById('voice_select');
+        const choice = select ? select.value : 'google';
+
+        // 1. 若選擇 Google 真人語音 (最自然且各裝置皆支援)
+        if (choice === 'google') {
+            playGoogleTTS(textToSpeak);
+            return;
+        }
+
+        // 2. 若選擇手機預設/Siri 或特定裝置語音
+        playWebSpeech(textToSpeak, choice);
+    }
+
+    function playGoogleTTS(text) {
+        const speed = parseFloat(document.getElementById('speed_slider').value) || 0.8;
+        const encoded = encodeURIComponent(text);
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=ja&q=${encoded}`;
+
+        if (!currentAudioEl) {
+            currentAudioEl = new Audio();
+        }
+        currentAudioEl.src = url;
+        currentAudioEl.playbackRate = speed;
+
+        const p = currentAudioEl.play();
+        if (p !== undefined) {
+            p.catch(err => {
+                console.warn("Google TTS 播放受限，自動退回裝置語音:", err);
+                playWebSpeech(text, 'system');
+            });
+        }
+    }
+
+    function playWebSpeech(textToSpeak, choice) {
         if (!('speechSynthesis' in window)) {
             alert("您的裝置或瀏覽器不支援語音合成功能");
             return;
         }
-        stopAudio();
         if (window.speechSynthesis.paused) {
             window.speechSynthesis.resume();
         }
 
-        const textToSpeak = currentQuestion.kanji || currentQuestion.kana;
         const u = new SpeechSynthesisUtterance(textToSpeak);
         u.lang = 'ja-JP';
         const speedSlider = document.getElementById('speed_slider');
         u.rate = speedSlider ? parseFloat(speedSlider.value) : 0.8;
 
-        const select = document.getElementById('voice_select');
-        if (select && select.value !== "" && availableVoices[select.value]) {
-            u.voice = availableVoices[select.value];
+        // 若不是 system，才鎖定特定 voice 物件；若是 system 則不指名 voice，讓 iPhone/Android 自動跑最新下載的 Siri 或高音質聲音！
+        if (choice !== 'system' && choice !== 'google' && availableVoices[choice]) {
+            u.voice = availableVoices[choice];
         }
 
         // 防止垃圾回收導致行動裝置語音半途中斷 (iOS/Android Safari/Chrome bug fix)
@@ -1301,6 +1341,10 @@
     }
 
     function stopAudio() { 
+        if (currentAudioEl) {
+            currentAudioEl.pause();
+            currentAudioEl.currentTime = 0;
+        }
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
         }
