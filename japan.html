@@ -29,27 +29,59 @@
             justify-content: center;
         }
 
-        /* 手機全螢幕容器 (Mobile First) */
+        /* 容器佈局 (RWD: 手機滿版、電腦/平板舒適寬版) */
         .container {
             width: 100%;
-            max-width: 460px;
+            max-width: 100%;
             min-height: 100dvh;
             background: #ffffff;
             display: flex;
             flex-direction: column;
-            padding: 10px 12px 14px;
+            padding: 12px 14px 16px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
             position: relative;
         }
 
-        @media (min-width: 461px) {
+        /* 電腦與平板 (寬度大於 640px) */
+        @media (min-width: 641px) {
             body {
-                padding: 10px 0;
+                padding: 24px 16px;
+                background-color: #f1f5f9;
             }
             .container {
-                min-height: calc(100vh - 20px);
-                border-radius: 16px;
+                max-width: 780px;
+                min-height: calc(100vh - 48px);
+                border-radius: 18px;
                 border: 1px solid #e2e8f0;
+                padding: 22px 28px 26px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            }
+            .header-title {
+                font-size: 20px;
+            }
+            .bank-select {
+                max-width: 280px;
+                font-size: 14px;
+                padding: 6px 10px;
+            }
+            .display-card {
+                padding: 16px 20px;
+            }
+            #lbl_kanji {
+                font-size: 24px;
+            }
+            #lbl_kana {
+                font-size: 16px;
+            }
+            #lbl_trans {
+                font-size: 15px;
+            }
+            .opt-text {
+                font-size: 16px;
+            }
+            .btn-action {
+                padding: 14px 0;
+                font-size: 16px;
             }
         }
 
@@ -334,56 +366,53 @@
         .audio-bar {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             margin-bottom: 8px;
             background: #f1f5f9;
-            padding: 6px 10px;
-            border-radius: 10px;
+            padding: 8px 12px;
+            border-radius: 12px;
         }
 
         .btn-play {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
             color: white;
             border: none;
-            padding: 8px 14px;
-            border-radius: 8px;
-            font-size: 14px;
+            padding: 10px 22px;
+            min-height: 46px;
+            border-radius: 12px;
+            font-size: 16px;
             font-weight: 700;
+            letter-spacing: 0.5px;
             cursor: pointer;
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 4px;
-            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+            justify-content: center;
+            gap: 6px;
+            box-shadow: 0 3px 10px rgba(37, 99, 235, 0.35);
             flex-shrink: 0;
+            transition: all 0.15s ease;
+            user-select: none;
         }
 
         .btn-play:active {
-            transform: scale(0.97);
+            transform: scale(0.95);
+            box-shadow: 0 1px 4px rgba(37, 99, 235, 0.2);
         }
 
-        .btn-stop {
-            background: #ef4444;
-            color: white;
-            border: none;
-            padding: 8px 10px;
-            border-radius: 8px;
-            font-size: 14px;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-
-        .btn-stop:active {
-            transform: scale(0.97);
+        .btn-play-icon {
+            font-size: 18px;
+            line-height: 1;
         }
 
         .voice-select {
             flex: 1;
-            min-width: 75px;
-            padding: 6px 4px;
-            border-radius: 6px;
+            min-width: 80px;
+            height: 44px;
+            padding: 6px 8px;
+            border-radius: 8px;
             border: 1px solid #cbd5e1;
             background: white;
-            font-size: 12px;
+            font-size: 13px;
             color: #334155;
             outline: none;
         }
@@ -391,7 +420,8 @@
         .speed-control {
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 5px;
+            height: 44px;
             flex-shrink: 0;
         }
 
@@ -656,8 +686,10 @@
 
     <!-- 語音控制列 -->
     <div class="audio-bar">
-        <button class="btn-play" onclick="playAudio()">▶ 播放</button>
-        <button class="btn-stop" onclick="stopAudio()">⏸</button>
+        <button class="btn-play" onclick="playAudio()">
+            <span class="btn-play-icon">▶</span>
+            <span>播放</span>
+        </button>
         <select id="voice_select" class="voice-select"></select>
         <div class="speed-control">
             <input type="range" id="speed_slider" min="0.5" max="1.5" step="0.1" value="0.8">
