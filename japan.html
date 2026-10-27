@@ -689,7 +689,7 @@
             <span class="btn-play-icon">▶</span>
             <span>播放</span>
         </button>
-        <select id="voice_select" class="voice-select"></select>
+        <select id="voice_select" class="voice-select" onchange="onVoiceChange()" title="切換日語發音角色"></select>
         <div class="speed-control">
             <input type="range" id="speed_slider" min="0.5" max="1.5" step="0.1" value="0.8">
             <span id="speed_val">0.8x</span>
@@ -971,28 +971,55 @@
     }
 
     function loadVoices() {
+        if (!('speechSynthesis' in window)) return;
         const voices = window.speechSynthesis.getVoices();
         availableVoices = voices.filter(v => v.lang.startsWith('ja') || v.lang === 'ja_JP' || v.lang === 'ja-JP');
         const select = document.getElementById('voice_select');
+        if (!select) return;
         select.innerHTML = '';
 
         if (availableVoices.length === 0) {
-            select.innerHTML = '<option value="">日語語音</option>';
+            select.innerHTML = '<option value="">🇯🇵 系統日語</option>';
             return;
         }
+
+        const savedVoiceName = localStorage.getItem('selected_voice_name');
+        let matchedIndex = -1;
 
         availableVoices.forEach((voice, index) => {
             const option = document.createElement('option');
             option.value = index;
-            option.textContent = voice.name.replace(/Microsoft |Google |Online \(Natural\) - /g, '');
-            if (voice.name.includes('Natural') || voice.name.includes('Online')) {
-                option.selected = true;
+            // 清理手機端顯示名稱，更精簡好辨識
+            let displayName = voice.name
+                .replace(/Microsoft |Google |Online \(Natural\) - |Apple |Siri /g, '')
+                .replace(/Japanese \(Japan\)|ja-JP/gi, '')
+                .trim();
+            if (!displayName) displayName = `語音 ${index + 1}`;
+            option.textContent = `🗣️ ${displayName}`;
+
+            if (savedVoiceName && voice.name === savedVoiceName) {
+                matchedIndex = index;
+            } else if (matchedIndex === -1 && (voice.name.includes('Natural') || voice.name.includes('Online') || voice.name.includes('Kyoko') || voice.name.includes('Siri'))) {
+                matchedIndex = index;
             }
             select.appendChild(option);
         });
+
+        if (matchedIndex !== -1) {
+            select.selectedIndex = matchedIndex;
+        }
     }
 
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+    function onVoiceChange() {
+        const select = document.getElementById('voice_select');
+        if (select && select.value !== "" && availableVoices[select.value]) {
+            localStorage.setItem('selected_voice_name', availableVoices[select.value].name);
+            // 變更語音時立即試聽當前句子
+            playAudio();
+        }
+    }
+
+    if (window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) {
         window.speechSynthesis.onvoiceschanged = loadVoices;
     }
 
