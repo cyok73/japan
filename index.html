@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>日文會話聽力練習 (Gemini AI 網頁版)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            background-color: #f1f5f9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, 'Microsoft JhengHei', sans-serif;
+            color: #1e293b;
+            line-height: 1.4;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+        }
+
+        /* 容器佈局 (RWD: 手機滿版、電腦/平板舒適寬版) */
+        .container {
+            width: 100%;
+            max-width: 100%;
+            min-height: 100dvh;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            padding: 12px 14px 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            position: relative;
+        }
+
+        /* 電腦與平板 (寬度大於 640px) */
+        @media (min-width: 641px) {
+            body {
+                padding: 24px 16px;
+                background-color: #f1f5f9;
+            }
+            .container {
+                max-width: 780px;
+                min-height: calc(100vh - 48px);
+                border-radius: 18px;
+                border: 1px solid #e2e8f0;
+                padding: 22px 28px 26px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            }
+            .header-title {
+                font-size: 20px;
+            }
+            .bank-select {
+                max-width: 280px;
+                font-size: 14px;
+                padding: 6px 10px;
+            }
+            .display-card {
+                padding: 16px 20px;
+            }
+            #lbl_kanji {
+                font-size: 24px;
+            }
+            #lbl_kana {
+                font-size: 16px;
+            }
+            #lbl_trans {
+                font-size: 15px;
+            }
+            .opt-text {
+                font-size: 16px;
+            }
+            .btn-action {
+                padding: 14px 0;
+                font-size: 16px;
+            }
+        }
+
+        /* 頂部 Header 列 */
+        .app-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 0 6px;
+            border-bottom: 1px solid #f1f5f9;
+            gap: 8px;
+        }
+
+        .header-title-box {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a;
+            white-space: nowrap;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-pill {
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #475569;
+            padding: 5px 9px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-pill:active {
+            transform: scale(0.96);
+        }
+
+        .btn-pill.active {
+            background: #fef3c7;
+            border-color: #f59e0b;
+            color: #b45309;
+        }
+
+        .btn-pill.star-active {
+            background: #fffbeb;
+            border-color: #f59e0b;
+            color: #d97706;
+        }
+
+        /* 題庫切換橫列 (可下拉選 100/200/或新上傳檔案) */
+        .bank-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 10px;
+            padding: 6px 10px;
+            margin: 6px 0 4px;
+            gap: 8px;
+        }
+
+        .bank-select-box {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .bank-select {
+            flex: 1;
+            max-width: 175px;
+            padding: 4px 6px;
+            border: 1.5px solid #86efac;
+            border-radius: 6px;
+            background: #ffffff;
+            font-size: 13px;
+            font-weight: 600;
+            color: #166534;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .icon-btn-sm {
+            border: 1px solid #cbd5e1;
+            background: white;
+            border-radius: 6px;
+            padding: 4px 7px;
+            cursor: pointer;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .icon-btn-sm:active {
+            transform: scale(0.92);
+        }
+
+        .badge-count {
+            font-size: 11px;
+            font-weight: 600;
+            background: #dcfce7;
+            color: #15803d;
+            padding: 2px 7px;
+            border-radius: 12px;
+            border: 1px solid #bbf7d0;
+            white-space: nowrap;
+        }
+
+        .spinning {
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 可折疊之進階設定面板 (預設收合，不佔手機高度) */
+        .settings-details {
+            margin: 4px 0 6px;
+            background: #f8fafc;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+            font-size: 13px;
+        }
+
+        .settings-summary {
+            padding: 7px 12px;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .settings-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .settings-summary::after {
+            content: "▼";
+            font-size: 10px;
+            transition: transform 0.2s;
+        }
+
+        .settings-details[open] .settings-summary::after {
+            transform: rotate(180deg);
+        }
+
+        .settings-content {
+            padding: 8px 12px 10px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .settings-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        .btn-sm:active {
+            opacity: 0.8;
+        }
+
+        .btn-green { background: #10b981; color: white; }
+        .btn-gray { background: #64748b; color: white; }
+        .btn-orange { background: #f59e0b; color: white; }
+        .btn-blue { background: #3b82f6; color: white; }
+
+        .key-input {
+            flex: 1;
+            min-width: 130px;
+            padding: 6px 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        /* 句子顯示卡片區 */
+        .display-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 10px 12px;
+            margin: 4px 0 8px;
+            position: relative;
+        }
+
+        .display-toggles {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            margin-bottom: 6px;
+            padding-bottom: 6px;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+
+        .toggle-chip {
+            font-size: 12px;
+            color: #64748b;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            user-select: none;
+        }
+
+        .toggle-chip input[type="checkbox"] {
+            accent-color: #3b82f6;
+            cursor: pointer;
+        }
+
+        .text-display-area {
+            min-height: 70px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .text-line {
+            transition: all 0.2s;
+        }
+
+        #lbl_kanji {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 3px;
+            line-height: 1.35;
+        }
+
+        #lbl_kana {
+            font-size: 14px;
+            color: #475569;
+            margin-bottom: 2px;
+            line-height: 1.3;
+        }
+
+        #lbl_trans {
+            font-size: 13px;
+            color: #64748b;
+            line-height: 1.3;
+        }
+
+        /* 語音控制橫列 */
+        .audio-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            background: #f1f5f9;
+            padding: 8px 12px;
+            border-radius: 12px;
+        }
+
+        .btn-play {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            padding: 10px 22px;
+            min-height: 46px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            box-shadow: 0 3px 10px rgba(37, 99, 235, 0.35);
+            flex-shrink: 0;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+
+        .btn-play:active {
+            transform: scale(0.95);
+            box-shadow: 0 1px 4px rgba(37, 99, 235, 0.2);
+        }
+
+        .btn-play-icon {
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        .voice-select {
+            flex: 1;
+            min-width: 80px;
+            height: 44px;
+            padding: 6px 8px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-size: 13px;
+            color: #334155;
+            outline: none;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            height: 44px;
+            flex-shrink: 0;
+        }
+
+        .speed-control input[type="range"] {
+            width: 55px;
+            accent-color: #3b82f6;
+            cursor: pointer;
+        }
+
+        #speed_val {
+            font-size: 11px;
+            font-weight: 700;
+            color: #475569;
+            min-width: 28px;
+        }
+
+        /* 分頁切換鈕 (選擇題 / 聽寫題) */
+        .tabs {
+            display: flex;
+            background: #f1f5f9;
+            border-radius: 8px;
+            padding: 3px;
+            margin-bottom: 8px;
+        }
+
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 6px 0;
+            font-size: 13px;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            background: #ffffff;
+            color: #2563eb;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 選擇題選項卡片 (大觸控面積) */
+        #options_container {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            margin-bottom: 8px;
+        }
+
+        .option-item {
+            position: relative;
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 9px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            transition: all 0.18s ease;
+            user-select: none;
+        }
+
+        .option-item:active {
+            background: #f8fafc;
+        }
+
+        .option-item.selected {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .option-item.correct {
+            border-color: #10b981 !important;
+            background: #ecfdf5 !important;
+            color: #065f46 !important;
+            font-weight: 600;
+        }
+
+        .option-item.wrong {
+            border-color: #ef4444 !important;
+            background: #fef2f2 !important;
+            color: #991b1b !important;
+        }
+
+        .option-item input[type="radio"] {
+            margin-top: 3px;
+            accent-color: #2563eb;
+            transform: scale(1.15);
+        }
+
+        .opt-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .opt-text {
+            font-size: 14.5px;
+            line-height: 1.35;
+            color: #1e293b;
+        }
+
+        .opt-jp-trans {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        /* 聽寫題區域 */
+        #tab_dict {
+            padding: 6px 0;
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        #input_dict {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 15px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            outline: none;
+        }
+
+        #input_dict:focus {
+            border-color: #3b82f6;
+        }
+
+        .dict-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* 底部操作與回饋列 (拇指友好) */
+        .bottom-bar {
+            margin-top: auto;
+            padding-top: 8px;
+            border-top: 1px solid #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        #lbl_feedback {
+            font-size: 14px;
+            font-weight: 700;
+            min-height: 20px;
+            text-align: center;
+        }
+
+        .action-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-action {
+            flex: 1;
+            padding: 11px 0;
+            font-size: 15px;
+            font-weight: 700;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        }
+
+        .btn-action:active {
+            transform: scale(0.98);
+        }
+
+        .btn-submit {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-next {
+            background: #10b981;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- 頂部 Header -->
+    <header class="app-header">
+        <div class="header-title-box">
+            <span class="header-title">🇯🇵 日文聽力練習</span>
+        </div>
+        <div class="header-actions">
+            <!-- 隱藏原生 checkbox，使用按鈕同步控制 -->
+            <input type="checkbox" id="chk_review" style="display: none;" onchange="handleReviewCheckboxChange()">
+            <button class="btn-pill" id="btn_review_toggle" onclick="toggleReviewMode()">⭐ 錯題</button>
+            <button class="btn-pill" id="btn_star" onclick="toggleStar()">☆ 收藏</button>
+        </div>
+    </header>
+
+    <!-- 題庫切換橫列 (自動掃描 GitHub & 下拉切換 100/200/更多) -->
+    <div class="bank-bar">
+        <div class="bank-select-box">
+            <span style="font-size: 12px; font-weight: 700; color: #166534; white-space: nowrap;">📚 題庫:</span>
+            <select id="select_bank" class="bank-select" onchange="onBankSelectionChange(this.value)">
+                <option value="n5_200.json">n5_200.json</option>
+                <option value="n5_100.json">n5_100.json</option>
+            </select>
+            <button class="icon-btn-sm" id="btn_refresh_bank" onclick="scanAvailableBanks(true)" title="從 GitHub 重新掃描最新題庫檔">🔄</button>
+        </div>
+        <span id="lbl_count" class="badge-count">讀取中...</span>
+    </div>
+
+    <!-- 可收合設定與題庫管理面板 -->
+    <details class="settings-details" id="settings_panel">
+        <summary class="settings-summary">
+            <span>⚙️ 進階管理 & API設定</span>
+            <span id="lbl_status" style="font-size: 11px; color: #2563eb; font-weight: normal;">🤖 系統就緒</span>
+        </summary>
+        <div class="settings-content">
+            <div class="settings-row">
+                <button class="btn-sm btn-green" onclick="reloadCurrentBank()">🔄 重載當前題庫</button>
+                <label class="btn-sm btn-gray" style="cursor: pointer; display: inline-flex; align-items: center;">
+                    📁 匯入題庫 (.json)
+                    <input type="file" id="file_import" accept=".json" style="display: none;" onchange="handleFileImport(this)">
+                </label>
+                <button class="btn-sm btn-orange" onclick="clearOldCache()">重設快取</button>
+            </div>
+            <div class="settings-row" style="margin-top: 4px;">
+                <input type="password" id="input_api_key" class="key-input" placeholder="Gemini API Key" onchange="saveApiKey()">
+                <button class="btn-sm btn-blue" onclick="callAiGenerate(10, false)">AI補題</button>
+            </div>
+        </div>
+    </details>
+
+    <!-- 句子顯示卡片 -->
+    <div class="display-card">
+        <div class="display-toggles">
+            <label class="toggle-chip"><input type="checkbox" id="show_kanji" onchange="refreshDisplay()"> 漢字</label>
+            <label class="toggle-chip"><input type="checkbox" id="show_kana" onchange="refreshDisplay()"> 假名</label>
+            <label class="toggle-chip"><input type="checkbox" id="show_trans" onchange="refreshDisplay()"> 中文</label>
+        </div>
+        <div class="text-display-area">
+            <div id="lbl_kanji" class="text-line"></div>
+            <div id="lbl_kana" class="text-line"></div>
+            <div id="lbl_trans" class="text-line"></div>
+        </div>
+    </div>
+
+    <!-- 語音控制列 -->
+    <div class="audio-bar">
+        <button class="btn-play" onclick="playAudio()">
+            <span class="btn-play-icon">▶</span>
+            <span>播放</span>
+        </button>
+        <select id="voice_select" class="voice-select"></select>
+        <div class="speed-control">
+            <input type="range" id="speed_slider" min="0.5" max="1.5" step="0.1" value="0.8">
+            <span id="speed_val">0.8x</span>
+        </div>
+    </div>
+
+    <!-- 分頁選單 -->
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab(0)">選擇題</div>
+        <div class="tab" onclick="switchTab(1)">聽寫題</div>
+    </div>
+
+    <!-- 選擇題面板 -->
+    <div id="tab_choice" class="tab-content active">
+        <div id="options_container"></div>
+    </div>
+
+    <!-- 聽寫題面板 -->
+    <div id="tab_dict" class="tab-content">
+        <p style="font-size: 13px; color: #475569;">請輸入聽到的日文句子（漢字或平假名）：</p>
+        <input type="text" id="input_dict" placeholder="輸入日文句子...">
+        <div class="dict-actions" style="margin-top: 8px;">
+            <button class="btn-sm btn-blue" style="flex: 1; padding: 9px;" onclick="checkDict()">提交聽寫</button>
+            <button class="btn-sm btn-orange" style="padding: 9px 14px;" onclick="showHint()">💡 提示</button>
+        </div>
+    </div>
+
+    <!-- 底部操作列 (回饋訊息 + 提交/下一題) -->
+    <div class="bottom-bar">
+        <div id="lbl_feedback"></div>
+        <div class="action-row">
+            <button class="btn-action btn-submit" id="btn_submit_choice" onclick="checkChoice()">提交選擇</button>
+            <button class="btn-action btn-next" onclick="nextQuestion()">下一題 ➡</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const GITHUB_REPO = "cyok73/japan";
+    var DEFAULT_KEY = "AQ.Ab8RN6JmZTDdC8MEhGGGw5qFdgo_GBil3NBNvRYYzVejpyRywg";
+    var questions = [], currentQuestion = null, answeredCount = 0, currentTabIdx = 0, aiIsRunning = false;
+    var isAnswered = false;
+    var availableVoices = [];
+    var availableBanks = ["n5_200.json", "n5_100.json"];
+
+    const TOPICS = [
+        "超商或超市購物（問袋子、加熱、找零、會員卡）",
+        "餐廳與居酒屋用餐（點餐、加水、推薦料理、結帳）",
+        "車站與交通搭乘（買票、詢問月台、換乘、末班車）",
+        "日常問候與朋友聊天（週末計畫、興趣、天氣、約時間）",
+        "生病或藥妝店（頭痛、感冒、買藥、用法用量）",
+        "旅遊與飯店住宿（Check-in、寄放行李、退房時間、早餐、接駁車）",
+        "問路與方向指引（走幾分鐘、轉角、紅綠燈、在對面）",
+        "學校或辦公室日常（借文具、請假、遲到道歉、影印）",
+        "家事與休閒生活（起床、做飯、看電視、散步、睡覺）"
+    ];
+
+    const FALLBACK_QUESTIONS = [
+        {
+            id: 1, 
+            kanji: "お箸やスプーンはお使いになりますか。", 
+            kana: "おはしやすぷーんはおつかいになりますか。", 
+            translation: "請問您需要使用筷子或湯匙嗎？", 
+            options: [
+                { zh: "請問您需要使用筷子或湯匙嗎？", ja: "お箸やスプーンはお使いになりますか。" },
+                { zh: "請問便當需要幫您加熱嗎？", ja: "お弁当は温めますか。" },
+                { zh: "一共是三千日圓，謝謝您。", ja: "全部で三千円になります、ありがとうございます。" },
+                { zh: "請問需要為您印收據嗎？", ja: "レシートはご利用になりますか。" }
+            ], 
+            starred: false 
+        },
+        { 
+            id: 2, 
+            kanji: "袋はいりますか。", 
+            kana: "ふくろはいりますか。", 
+            translation: "需要袋子嗎？", 
+            options: [
+                { zh: "需要袋子嗎？", ja: "袋はいりますか。" },
+                { zh: "要加熱嗎？", ja: "温めますか。" },
+                { zh: "結帳請分開算。", ja: "お会計は別々にお願いします。" },
+                { zh: "請給我一杯水。", ja: "お水を一杯ください。" }
+            ], 
+            starred: false 
+        }
+    ];
+
+    // 自動從 GitHub 倉庫掃描所有 .json 題庫檔案
+    async function scanAvailableBanks(manual = false) {
+        const refreshBtn = document.getElementById('btn_refresh_bank');
+        if (refreshBtn) refreshBtn.classList.add('spinning');
+
+        try {
+            const resp = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents?t=` + Date.now(), {
+                headers: { 'Accept': 'application/vnd.github.v3+json' }
+            });
+            if (resp.ok) {
+                const files = await resp.json();
+                if (Array.isArray(files)) {
+                    const jsonFiles = files
+                        .map(f => f.name)
+                        .filter(name => name.endsWith('.json') && !name.startsWith('package') && !name.startsWith('vercel'));
+                    
+                    if (jsonFiles.length > 0) {
+                        availableBanks = Array.from(new Set([...jsonFiles, ...availableBanks]));
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("GitHub API 掃描異常:", e);
+        } finally {
+            if (refreshBtn) refreshBtn.classList.remove('spinning');
+        }
+
+        renderBankSelect();
+        if (manual) {
+            alert(`✅ 題庫掃描完成！目前共有 ${availableBanks.length} 個題庫檔案可供切換。`);
+        }
+    }
+
+    function renderBankSelect() {
+        const sel = document.getElementById('select_bank');
+        if (!sel) return;
+        const currentFile = localStorage.getItem('selected_bank_file') || 'n5_200.json';
+        sel.innerHTML = '';
+        availableBanks.forEach(file => {
+            const opt = document.createElement('option');
+            opt.value = file;
+            opt.textContent = `📁 ${file}`;
+            if (file === currentFile) opt.selected = true;
+            sel.appendChild(opt);
+        });
+    }
+
+    async function onBankSelectionChange(filename) {
+        if (!filename) return;
+        await loadSpecificBank(filename, true);
+    }
+
+    async function loadSpecificBank(filename, showAlert = false, backgroundUpdate = false) {
+        if (!backgroundUpdate) updateStatus(`⏳ 載入 ${filename}...`, "#3b82f6");
+        try {
+            // 優先從 Vercel 同目錄讀取，附帶 timestamp 破除瀏覽器快取
+            let resp = await fetch(filename + '?t=' + Date.now());
+            if (!resp.ok) {
+                // 備援：若 Vercel 尚未部署完，直接由 GitHub Raw 讀取最新版
+                resp = await fetch(`https://raw.githubusercontent.com/${GITHUB_REPO}/main/${filename}?t=` + Date.now());
+            }
+            if (!resp.ok) throw new Error("HTTP " + resp.status);
+            
+            const text = await resp.text();
+            if (!text || !text.trim()) {
+                throw new Error("此題庫檔案目前內容為空，請先將題目放入檔案內！");
+            }
+
+            const data = JSON.parse(text);
+            if (Array.isArray(data) && data.length > 0) {
+                // 保留先前已收藏或做錯的星號狀態
+                const starredIds = new Set((questions || []).filter(q => q.starred).map(q => q.id));
+                data.forEach(item => {
+                    if (starredIds.has(item.id)) item.starred = true;
+                });
+
+                questions = data;
+                localStorage.setItem('jp_questions', JSON.stringify(questions));
+                localStorage.setItem('selected_bank_file', filename);
+                localStorage.setItem('cached_bank_file', filename);
+                updateStatus(`📚 ${filename} 已就緒`, "#10b981");
+                renderBankSelect();
+                updateCounterBadge();
+                if (!backgroundUpdate) {
+                    currentQuestion = null;
+                    answeredCount = 0;
+                    nextQuestion(false);
+                }
+                if (showAlert) alert(`✅ 成功切換到【${filename}】！共載入 ${questions.length} 題。`);
+                return true;
+            } else {
+                throw new Error("檔案格式不正確，必須是題目陣列！");
+            }
+        } catch (err) {
+            console.error("載入題庫失敗:", err);
+            if (!backgroundUpdate) {
+                updateStatus(`⚠️ ${filename} 載入失敗`, "#ef4444");
+                if (showAlert) {
+                    alert(`⚠️ 無法載入【${filename}】：\n${err.message || '檔案可能尚未上傳內容或格式有誤'}\n系統將保留目前題庫。`);
+                }
+                const currentFile = localStorage.getItem('selected_bank_file') || 'n5_200.json';
+                const sel = document.getElementById('select_bank');
+                if (sel) sel.value = currentFile;
+            }
+            return false;
+        }
+    }
+
+    async function reloadCurrentBank() {
+        const currentFile = localStorage.getItem('selected_bank_file') || 'n5_200.json';
+        await loadSpecificBank(currentFile, true);
+    }
+
+    function updateStatus(text, color) {
+        const lbl = document.getElementById('lbl_status');
+        if (lbl) {
+            lbl.innerText = text;
+            if (color) lbl.style.color = color;
+        }
+        updateCounterBadge();
+    }
+
+    function updateCounterBadge() {
+        const lblCount = document.getElementById('lbl_count');
+        if (lblCount && questions) {
+            const isReview = document.getElementById('chk_review').checked;
+            if (isReview) {
+                const count = questions.filter(q => q.starred).length;
+                lblCount.innerText = `⭐ 錯題 ${count} 題`;
+            } else {
+                lblCount.innerText = `${questions.length} 題`;
+            }
+        }
+    }
+
+    function handleFileImport(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (Array.isArray(data) && data.length > 0) {
+                    questions = data;
+                    currentQuestion = null;
+                    answeredCount = 0;
+                    localStorage.setItem('jp_questions', JSON.stringify(questions));
+                    localStorage.setItem('selected_bank_file', file.name);
+                    
+                    if (!availableBanks.includes(file.name)) {
+                        availableBanks.unshift(file.name);
+                    }
+                    renderBankSelect();
+                    updateStatus(`📚 已匯入 ${file.name}`, "#10b981");
+                    nextQuestion();
+                    alert(`✅ 成功匯入題庫【${file.name}】！共 ${questions.length} 道題目。`);
+                } else {
+                    alert("⚠️ 格式錯誤：JSON 內容必須是題目陣列！");
+                }
+            } catch (err) {
+                alert("⚠️ 檔案讀取失敗，請確認是否為正確的 JSON 格式。");
+            }
+        };
+        reader.readAsText(file, "UTF-8");
+        input.value = "";
+    }
+
+    async function clearOldCache() {
+        const currentFile = localStorage.getItem('selected_bank_file') || 'n5_200.json';
+        if (confirm(`是否清空舊快取，並重新從「${currentFile}」載入題目？`)) {
+            localStorage.removeItem('jp_questions');
+            const ok = await loadSpecificBank(currentFile, false);
+            if (!ok) {
+                questions = [...FALLBACK_QUESTIONS];
+                localStorage.setItem('jp_questions', JSON.stringify(questions));
+                updateStatus(`⚠️ 使用備用題庫`, "#f59e0b");
+            }
+            nextQuestion();
+            alert(`已重設題庫快取！目前共有 ${questions.length} 題。`);
+        }
+    }
+
+    function getApiKey() {
+        return localStorage.getItem('user_gemini_key') || DEFAULT_KEY;
+    }
+
+    function saveApiKey() {
+        const val = document.getElementById('input_api_key').value.trim();
+        if (val) {
+            localStorage.setItem('user_gemini_key', val);
+            alert("已儲存新的 API Key！");
+        }
+    }
+
+    function loadVoices() {
+        const voices = window.speechSynthesis.getVoices();
+        availableVoices = voices.filter(v => v.lang.startsWith('ja') || v.lang === 'ja_JP' || v.lang === 'ja-JP');
+        const select = document.getElementById('voice_select');
+        select.innerHTML = '';
+
+        if (availableVoices.length === 0) {
+            select.innerHTML = '<option value="">日語語音</option>';
+            return;
+        }
+
+        availableVoices.forEach((voice, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = voice.name.replace(/Microsoft |Google |Online \(Natural\) - /g, '');
+            if (voice.name.includes('Natural') || voice.name.includes('Online')) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+    }
+
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    document.getElementById('speed_slider').addEventListener('input', (e) => {
+        document.getElementById('speed_val').innerText = e.target.value + 'x';
+    });
+
+    window.onload = async function() {
+        loadVoices();
+        const savedKey = localStorage.getItem('user_gemini_key');
+        if (savedKey) document.getElementById('input_api_key').value = savedKey;
+
+        // 1. 自動從 GitHub 掃描所有可用的題庫檔案 (n5_100.json, n5_200.json 等)
+        await scanAvailableBanks(false);
+
+        // 2. 獲取上次選中的題庫檔名，預設 n5_200.json
+        const currentFile = localStorage.getItem('selected_bank_file') || 'n5_200.json';
+        const cachedBank = localStorage.getItem('cached_bank_file');
+
+        // 3. 讀取 localStorage 快取
+        let localData = null;
+        try {
+            const raw = localStorage.getItem('jp_questions');
+            if (raw) localData = JSON.parse(raw);
+        } catch (e) {
+            localData = null;
+        }
+
+        // 只有在快取的檔案與目前選取的題庫完全一致時才讀快取快速呈現
+        if (cachedBank === currentFile && Array.isArray(localData) && localData.length > 2) {
+            questions = localData;
+            updateStatus(`📚 ${currentFile} 就緒`, "#10b981");
+            nextQuestion(false);
+            // 背景自動向伺服器核對有無更新的題目
+            loadSpecificBank(currentFile, false, true);
+        } else {
+            const loaded = await loadSpecificBank(currentFile, false, false);
+            if (!loaded) {
+                questions = [...FALLBACK_QUESTIONS];
+                localStorage.setItem('jp_questions', JSON.stringify(questions));
+                updateStatus(`⚠️ 使用備用題庫`, "#f59e0b");
+                nextQuestion(false);
+            }
+        }
+
+        renderBankSelect();
+        switchTab(0);
+        setTimeout(() => { bindKeyboardEvents(); }, 50);
+    };
+
+    function toggleReviewMode() {
+        const chk = document.getElementById('chk_review');
+        chk.checked = !chk.checked;
+        handleReviewCheckboxChange();
+        nextQuestion();
+    }
+
+    function handleReviewCheckboxChange() {
+        const chk = document.getElementById('chk_review');
+        const btn = document.getElementById('btn_review_toggle');
+        if (chk.checked) {
+            btn.classList.add('active');
+            btn.innerText = '⭐ 複習中';
+        } else {
+            btn.classList.remove('active');
+            btn.innerText = '⭐ 錯題';
+        }
+        updateCounterBadge();
+    }
+
+    function switchTab(idx) {
+        currentTabIdx = idx;
+        const tabs = document.querySelectorAll('.tab'), contents = document.querySelectorAll('.tab-content');
+        tabs.forEach((t, i) => t.classList.toggle('active', i === idx));
+        contents.forEach((c, i) => {
+            c.classList.toggle('active', i === idx);
+            c.style.display = (i === idx) ? 'flex' : 'none';
+        });
+
+        const submitBtn = document.getElementById('btn_submit_choice');
+        if (submitBtn) {
+            submitBtn.style.display = (idx === 0) ? 'block' : 'none';
+        }
+
+        stopAudio();
+    }
+
+    async function callAiGenerate(count = 10, startup = false) {
+        const activeKey = getApiKey();
+        if (!activeKey) return;
+
+        aiIsRunning = true;
+        document.getElementById('lbl_status').innerText = "🤖 AI 正在發想新題目...";
+        document.getElementById('lbl_status').style.color = "orange";
+
+        const randomTopic1 = TOPICS[Math.floor(Math.random() * TOPICS.length)];
+        let randomTopic2 = TOPICS[Math.floor(Math.random() * TOPICS.length)];
+        while (randomTopic1 === randomTopic2) {
+            randomTopic2 = TOPICS[Math.floor(Math.random() * TOPICS.length)];
+        }
+
+        const recentBlacklist = questions.slice(-15).map(q => q.kanji).join('、') || "無";
+
+        const prompt = `請生成 ${count} 道適合「日文初學者(N5)」的真實日常聽力練習題。
+本次情境主題：【${randomTopic1}】與【${randomTopic2}】。
+
+【格式嚴格要求】：
+1. options 陣列必須包含4個物件，每個物件必須提供中文(zh)與「該選項精準翻譯的完整日文句子(ja)」！
+2. kana 必須是 kanji 的「完全正確讀音平假名」，嚴禁假名拼錯或字元順序顛倒（例如：「お使い」必須是「おつかい」，不可寫成「やつかい」）。
+3. 嚴禁額外 Markdown 說明，直接輸出合法 JSON 陣列：
+[
+  {
+    "id": 999,
+    "kanji": "日文漢字句子",
+    "kana": "純平假名句子",
+    "translation": "繁體中文翻譯",
+    "options": [
+      { "zh": "正確中文翻譯", "ja": "正確日文句子" },
+      { "zh": "錯誤選項1中文", "ja": "錯誤選項1的日文句子" },
+      { "zh": "錯誤選項2中文", "ja": "錯誤選項2的日文句子" },
+      { "zh": "錯誤選項3中文", "ja": "錯誤選項3的日文句子" }
+    ],
+    "starred": false
+  }
+]
+⚠️ 嚴禁重複：${recentBlacklist}`;
+
+        try {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(activeKey)}`;
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        temperature: 1.0
+                    }
+                })
+            });
+
+            if (response.status === 503) {
+                document.getElementById('lbl_status').innerText = `⚠️ Google 伺服器忙碌(503)`;
+                document.getElementById('lbl_status').style.color = "#f59e0b";
+                return;
+            }
+
+            const data = await response.json();
+            if (data.error) {
+                document.getElementById('lbl_status').innerText = `⚠️ 額度限制或連線異常`;
+                document.getElementById('lbl_status').style.color = "#f59e0b";
+                return;
+            }
+
+            let aiText = data.candidates[0].content.parts[0].text.trim();
+            if (aiText.startsWith("```")) {
+                aiText = aiText.replace(/^```[a-zA-Z]*\n|```$/g, "").trim();
+            }
+
+            const newQuestions = JSON.parse(aiText);
+            let currentMaxId = questions.length > 0 ? Math.max(...questions.map(q => q.id)) : 0;
+            newQuestions.forEach(item => {
+                const isDup = questions.some(q => cleanText(item.kanji) === cleanText(q.kanji) || cleanText(item.kana) === cleanText(q.kana));
+                if (!isDup) { 
+                    currentMaxId++; 
+                    item.id = currentMaxId; 
+                    questions.push(item); 
+                }
+            });
+            localStorage.setItem('jp_questions', JSON.stringify(questions));
+            updateStatus(`⚙️ 題庫充足 (共 ${questions.length} 題)`, "#10b981");
+            if (startup && !currentQuestion) nextQuestion();
+        } catch (e) {
+            updateStatus(`⚠️ 離線模式 (共 ${questions.length} 題)`, "#f59e0b");
+        } finally {
+            aiIsRunning = false;
+        }
+    }
+
+    function getOptZh(opt) {
+        return (typeof opt === 'object' && opt !== null) ? opt.zh : opt;
+    }
+
+    function getOptJa(opt) {
+        return (typeof opt === 'object' && opt !== null && opt.ja) ? opt.ja : "";
+    }
+
+    function nextQuestion(autoPlay = true) {
+        isAnswered = false;
+        document.getElementById('lbl_feedback').innerText = "";
+        document.getElementById('input_dict').value = "";
+        const isReview = document.getElementById('chk_review').checked;
+        let pool = isReview ? questions.filter(q => q.starred) : questions;
+
+        if (pool.length === 0) {
+            if (isReview) {
+                alert("目前沒有收藏的錯題唷！已自動恢復一般模式。");
+                document.getElementById('chk_review').checked = false;
+                handleReviewCheckboxChange();
+                pool = questions;
+            } else {
+                questions = [...FALLBACK_QUESTIONS];
+                pool = questions;
+            }
+        }
+        let chosen = pool[Math.floor(Math.random() * pool.length)];
+        if (pool.length > 1 && currentQuestion && chosen.id === currentQuestion.id) {
+            chosen = pool.filter(q => q.id !== currentQuestion.id)[Math.floor(Math.random() * (pool.length - 1))];
+        }
+        currentQuestion = chosen;
+        refreshDisplay();
+        updateStarBtnText();
+        updateCounterBadge();
+
+        const container = document.getElementById('options_container');
+        container.innerHTML = "";
+        currentQuestion.options.forEach((opt, i) => {
+            const zh = getOptZh(opt);
+            container.innerHTML += `
+                <label class="option-item" id="opt_label_${i}">
+                    <input type="radio" name="web_choice" value="${zh}" onchange="updateOptionSelection()">
+                    <div class="opt-body">
+                        <div class="opt-text">[${i+1}] ${zh}</div>
+                        <div class="opt-jp-trans" id="opt_trans_${i}"></div>
+                    </div>
+                </label>`;
+        });
+        if (autoPlay) {
+            playAudio();
+        }
+    }
+
+    function updateOptionSelection() {
+        document.querySelectorAll('.option-item').forEach(el => {
+            const r = el.querySelector('input[name="web_choice"]');
+            if (r && r.checked) {
+                el.classList.add('selected');
+            } else {
+                el.classList.remove('selected');
+            }
+        });
+    }
+
+    function playAudio() {
+        if (!currentQuestion) return;
+        if (!('speechSynthesis' in window)) {
+            alert("您的裝置或瀏覽器不支援語音合成功能");
+            return;
+        }
+        stopAudio();
+        if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+        }
+
+        const textToSpeak = currentQuestion.kanji || currentQuestion.kana;
+        const u = new SpeechSynthesisUtterance(textToSpeak);
+        u.lang = 'ja-JP';
+        const speedSlider = document.getElementById('speed_slider');
+        u.rate = speedSlider ? parseFloat(speedSlider.value) : 0.8;
+
+        const select = document.getElementById('voice_select');
+        if (select && select.value !== "" && availableVoices[select.value]) {
+            u.voice = availableVoices[select.value];
+        }
+
+        // 防止垃圾回收導致行動裝置語音半途中斷 (iOS/Android Safari/Chrome bug fix)
+        window._currentUtterance = u;
+        u.onend = () => { window._currentUtterance = null; };
+        u.onerror = (e) => {
+            console.warn('語音播放提示:', e);
+            window._currentUtterance = null;
+        };
+
+        try {
+            window.speechSynthesis.speak(u);
+        } catch (e) {
+            console.warn("speechSynthesis speak error:", e);
+        }
+    }
+
+    function stopAudio() { 
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+        }
+    }
+
+    function refreshDisplay() {
+        if (!currentQuestion) return;
+        document.getElementById('lbl_kanji').innerText = document.getElementById('show_kanji').checked ? currentQuestion.kanji : "";
+        document.getElementById('lbl_kana').innerText = document.getElementById('show_kana').checked ? currentQuestion.kana : "";
+        document.getElementById('lbl_trans').innerText = document.getElementById('show_trans').checked ? currentQuestion.translation : "";
+    }
+
+    function revealAllAnswers() {
+        document.getElementById('lbl_kanji').innerText = currentQuestion.kanji;
+        document.getElementById('lbl_kana').innerText = currentQuestion.kana;
+        document.getElementById('lbl_trans').innerText = currentQuestion.translation;
+
+        for (let i = 0; i < currentQuestion.options.length; i++) {
+            const opt = currentQuestion.options[i];
+            const zh = getOptZh(opt);
+            let ja = getOptJa(opt);
+            const isCorrect = (zh === currentQuestion.translation);
+
+            if (isCorrect) {
+                ja = currentQuestion.kanji || ja;
+            }
+
+            const transSpan = document.getElementById(`opt_trans_${i}`);
+            const label = document.getElementById(`opt_label_${i}`);
+
+            if (transSpan) {
+                transSpan.innerText = ja ? `(${ja})` : "";
+            }
+
+            if (label) {
+                if (isCorrect) {
+                    label.classList.add('correct');
+                    label.classList.remove('wrong');
+                } else {
+                    const r = label.querySelector('input[name="web_choice"]');
+                    if (r && r.checked) {
+                        label.classList.add('wrong');
+                    }
+                }
+            }
+        }
+    }
+
+    function cleanText(t) { 
+        return t ? t.replace(/[ \s\t\(\r\\)n，。、？！＿？?！!,.\-\"\'「」]/g, '') : ''; 
+    }
+
+    function recordAnswerAndCheckRefill() {
+        answeredCount++;
+        if (answeredCount >= 7) { 
+            answeredCount = 0; 
+            callAiGenerate(10, false); 
+        }
+    }
+
+    function checkChoice() {
+        const selected = document.querySelector('input[name="web_choice"]:checked');
+        if (!selected) return alert("請先點選一個選項！");
+        isAnswered = true;
+        if (selected.value === currentQuestion.translation) {
+            document.getElementById('lbl_feedback').innerText = "⭕ 正確！太棒了！";
+            document.getElementById('lbl_feedback').style.color = "#10b981";
+        } else {
+            document.getElementById('lbl_feedback').innerText = "❌ 答錯了！(已加入錯題收藏)";
+            document.getElementById('lbl_feedback').style.color = "#ef4444";
+            markAsStarred();
+        }
+        revealAllAnswers();
+        recordAnswerAndCheckRefill();
+    }
+
+    function checkDict() {
+        const userAns = cleanText(document.getElementById('input_dict').value);
+        if (!userAns) return alert("請先輸入聽寫內容！");
+        isAnswered = true;
+        if (userAns === cleanText(currentQuestion.kanji) || userAns === cleanText(currentQuestion.kana)) {
+            document.getElementById('lbl_feedback').innerText = "⭕ 聽寫完全正確！";
+            document.getElementById('lbl_feedback').style.color = "#10b981";
+        } else {
+            document.getElementById('lbl_feedback').innerText = "❌ 聽寫錯誤！(已加入錯題收藏)";
+            document.getElementById('lbl_feedback').style.color = "#ef4444";
+            markAsStarred();
+        }
+        revealAllAnswers();
+        recordAnswerAndCheckRefill();
+    }
+
+    function showHint() { 
+        alert(`這句話開頭的第一個日文字是：【 ${currentQuestion.kana ? currentQuestion.kana.charAt(0) : ''} 】\n完整假名字數約 ${currentQuestion.kana ? currentQuestion.kana.length : 0} 字`); 
+    }
+
+    function markAsStarred() { 
+        if (currentQuestion && !currentQuestion.starred) { 
+            currentQuestion.starred = true; 
+            localStorage.setItem('jp_questions', JSON.stringify(questions)); 
+            updateStarBtnText(); 
+            updateCounterBadge();
+        } 
+    }
+
+    function toggleStar() { 
+        if (currentQuestion) { 
+            currentQuestion.starred = !currentQuestion.starred; 
+            localStorage.setItem('jp_questions', JSON.stringify(questions)); 
+            updateStarBtnText(); 
+            updateCounterBadge();
+        } 
+    }
+
+    function updateStarBtnText() { 
+        const btn = document.getElementById('btn_star');
+        if (!btn) return;
+        if (currentQuestion && currentQuestion.starred) {
+            btn.innerText = "⭐ 已收藏";
+            btn.classList.add('star-active');
+        } else {
+            btn.innerText = "☆ 收藏";
+            btn.classList.remove('star-active');
+        }
+    }
+
+    function bindKeyboardEvents() {
+        window.addEventListener('keydown', (e) => {
+            const inputDict = document.getElementById('input_dict');
+            const inputKey = document.getElementById('input_api_key');
+            if ((inputDict && document.activeElement === inputDict) || 
+                (inputKey && document.activeElement === inputKey)) return;
+
+            if (currentTabIdx === 0 && ['1','2','3','4'].includes(e.key)) {
+                const radios = document.querySelectorAll('input[name="web_choice"]');
+                const idx = parseInt(e.key) - 1;
+                if (radios[idx]) {
+                    radios[idx].checked = true;
+                    updateOptionSelection();
+                }
+            }
+
+            if (e.key === ' ') {
+                e.preventDefault();
+                if (isAnswered) {
+                    nextQuestion();
+                } else {
+                    const selected = document.querySelector('input[name="web_choice"]:checked');
+                    if (currentTabIdx === 0 && selected) {
+                        checkChoice();
+                    } else {
+                        playAudio();
+                    }
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>

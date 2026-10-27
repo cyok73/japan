@@ -1,6 +1,7 @@
 {
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/", "destination": "/japan.html" }
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/japan", "destination": "/japan.html" }
   ]
 }
