@@ -7,7 +7,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>日文會話聽力練習 (Gemini AI 網頁版)</title>
-    <script src="n5_200.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -829,8 +828,8 @@
         await loadSpecificBank(filename, true);
     }
 
-    async function loadSpecificBank(filename, showAlert = false) {
-        updateStatus(`⏳ 載入 ${filename}...`, "#3b82f6");
+    async function loadSpecificBank(filename, showAlert = false, backgroundUpdate = false) {
+        if (!backgroundUpdate) updateStatus(`⏳ 載入 ${filename}...`, "#3b82f6");
         try {
             // 優先從 Vercel 同目錄讀取，附帶 timestamp 破除瀏覽器快取
             let resp = await fetch(filename + '?t=' + Date.now());
@@ -847,15 +846,24 @@
 
             const data = JSON.parse(text);
             if (Array.isArray(data) && data.length > 0) {
+                // 保留先前已收藏或做錯的星號狀態
+                const starredIds = new Set((questions || []).filter(q => q.starred).map(q => q.id));
+                data.forEach(item => {
+                    if (starredIds.has(item.id)) item.starred = true;
+                });
+
                 questions = data;
-                currentQuestion = null;
-                answeredCount = 0;
                 localStorage.setItem('jp_questions', JSON.stringify(questions));
                 localStorage.setItem('selected_bank_file', filename);
+                localStorage.setItem('cached_bank_file', filename);
                 updateStatus(`📚 ${filename} 已就緒`, "#10b981");
                 renderBankSelect();
                 updateCounterBadge();
-                nextQuestion();
+                if (!backgroundUpdate) {
+                    currentQuestion = null;
+                    answeredCount = 0;
+                    nextQuestion(false);
+                }
                 if (showAlert) alert(`✅ 成功切換到【${filename}】！共載入 ${questions.length} 題。`);
                 return true;
             } else {
@@ -863,13 +871,15 @@
             }
         } catch (err) {
             console.error("載入題庫失敗:", err);
-            updateStatus(`⚠️ ${filename} 載入失敗`, "#ef4444");
-            if (showAlert) {
-                alert(`⚠️ 無法載入【${filename}】：\n${err.message || '檔案可能尚未上傳內容或格式有誤'}\n系統將保留目前題庫。`);
+            if (!backgroundUpdate) {
+                updateStatus(`⚠️ ${filename} 載入失敗`, "#ef4444");
+                if (showAlert) {
+                    alert(`⚠️ 無法載入【${filename}】：\n${err.message || '檔案可能尚未上傳內容或格式有誤'}\n系統將保留目前題庫。`);
+                }
+                const currentFile = localStorage.getItem('selected_bank_file') || 'n5_200.json';
+                const sel = document.getElementById('select_bank');
+                if (sel) sel.value = currentFile;
             }
-            const currentFile = localStorage.getItem('selected_bank_file') || 'n5_200.json';
-            const sel = document.getElementById('select_bank');
-            if (sel) sel.value = currentFile;
             return false;
         }
     }
@@ -1000,6 +1010,7 @@
 
         // 2. 獲取上次選中的題庫檔名，預設 n5_200.json
         const currentFile = localStorage.getItem('selected_bank_file') || 'n5_200.json';
+        const cachedBank = localStorage.getItem('cached_bank_file');
 
         // 3. 讀取 localStorage 快取
         let localData = null;
@@ -1010,29 +1021,26 @@
             localData = null;
         }
 
-        if (Array.isArray(localData) && localData.length > 2) {
+        // 只有在快取的檔案與目前選取的題庫完全一致時才讀快取快速呈現
+        if (cachedBank === currentFile && Array.isArray(localData) && localData.length > 2) {
             questions = localData;
             updateStatus(`📚 ${currentFile} 就緒`, "#10b981");
+            nextQuestion(false);
+            // 背景自動向伺服器核對有無更新的題目
+            loadSpecificBank(currentFile, false, true);
         } else {
-            const loaded = await loadSpecificBank(currentFile, false);
+            const loaded = await loadSpecificBank(currentFile, false, false);
             if (!loaded) {
-                // 備援：若指定的檔案失敗，嘗試載入 n5_200.json 備援
-                if (typeof window !== 'undefined' && window.EMBEDDED_QUESTIONS) {
-                    questions = [...window.EMBEDDED_QUESTIONS];
-                    localStorage.setItem('jp_questions', JSON.stringify(questions));
-                    updateStatus(`📚 內建題庫已載入`, "#10b981");
-                } else {
-                    questions = [...FALLBACK_QUESTIONS];
-                    localStorage.setItem('jp_questions', JSON.stringify(questions));
-                    updateStatus(`⚠️ 使用備用題庫`, "#f59e0b");
-                }
+                questions = [...FALLBACK_QUESTIONS];
+                localStorage.setItem('jp_questions', JSON.stringify(questions));
+                updateStatus(`⚠️ 使用備用題庫`, "#f59e0b");
+                nextQuestion(false);
             }
         }
 
         renderBankSelect();
         switchTab(0);
         setTimeout(() => { bindKeyboardEvents(); }, 50);
-        nextQuestion();
     };
 
     function toggleReviewMode() {
@@ -1172,7 +1180,7 @@
         return (typeof opt === 'object' && opt !== null && opt.ja) ? opt.ja : "";
     }
 
-    function nextQuestion() {
+    function nextQuestion(autoPlay = true) {
         isAnswered = false;
         document.getElementById('lbl_feedback').innerText = "";
         document.getElementById('input_dict').value = "";
@@ -1212,7 +1220,9 @@
                     </div>
                 </label>`;
         });
-        playAudio();
+        if (autoPlay) {
+            playAudio();
+        }
     }
 
     function updateOptionSelection() {
@@ -1228,21 +1238,45 @@
 
     function playAudio() {
         if (!currentQuestion) return;
+        if (!('speechSynthesis' in window)) {
+            alert("您的裝置或瀏覽器不支援語音合成功能");
+            return;
+        }
         stopAudio();
+        if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+        }
+
         const textToSpeak = currentQuestion.kanji || currentQuestion.kana;
         const u = new SpeechSynthesisUtterance(textToSpeak);
         u.lang = 'ja-JP';
-        u.rate = parseFloat(document.getElementById('speed_slider').value);
+        const speedSlider = document.getElementById('speed_slider');
+        u.rate = speedSlider ? parseFloat(speedSlider.value) : 0.8;
 
         const select = document.getElementById('voice_select');
         if (select && select.value !== "" && availableVoices[select.value]) {
             u.voice = availableVoices[select.value];
         }
-        window.speechSynthesis.speak(u);
+
+        // 防止垃圾回收導致行動裝置語音半途中斷 (iOS/Android Safari/Chrome bug fix)
+        window._currentUtterance = u;
+        u.onend = () => { window._currentUtterance = null; };
+        u.onerror = (e) => {
+            console.warn('語音播放提示:', e);
+            window._currentUtterance = null;
+        };
+
+        try {
+            window.speechSynthesis.speak(u);
+        } catch (e) {
+            console.warn("speechSynthesis speak error:", e);
+        }
     }
 
     function stopAudio() { 
-        window.speechSynthesis.cancel(); 
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+        }
     }
 
     function refreshDisplay() {
