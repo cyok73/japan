@@ -970,41 +970,45 @@
         }
     }
 
+    function getJapaneseVoices() {
+        if (!('speechSynthesis' in window)) return [];
+        const all = window.speechSynthesis.getVoices();
+        return all.filter(v => v.lang && (v.lang.startsWith('ja') || v.lang === 'ja_JP' || v.lang === 'ja-JP'));
+    }
+
     function loadVoices() {
         const select = document.getElementById('voice_select');
         if (!select) return;
         select.innerHTML = '';
 
-        // 1. 始終置頂超清晰「Google 真人自然日語」（全手機通用，免設定）
-        const optGoogle = document.createElement('option');
-        optGoogle.value = 'google';
-        optGoogle.textContent = '🌟 Google 真人語音 (最自然)';
-        select.appendChild(optGoogle);
+        availableVoices = getJapaneseVoices();
 
-        // 2. 「手機預設 / Siri 增強語音」（不綁定舊機械音，自動套用 iPhone/Android 最新設定）
-        const optSystem = document.createElement('option');
-        optSystem.value = 'system';
-        optSystem.textContent = '📱 手機預設 / Siri 語音';
-        select.appendChild(optSystem);
+        // 1. 日語女聲 (推薦，自動選取 Kyoko / Siri女聲 / 系統女聲)
+        const optFemale = document.createElement('option');
+        optFemale.value = 'female';
+        optFemale.textContent = '🌸 日語女聲 (推薦)';
+        select.appendChild(optFemale);
 
-        if ('speechSynthesis' in window) {
-            const voices = window.speechSynthesis.getVoices();
-            availableVoices = voices.filter(v => v.lang.startsWith('ja') || v.lang === 'ja_JP' || v.lang === 'ja-JP');
+        // 2. 日語男聲 (自動選取 Otoya / Siri男聲 / 系統男聲)
+        const optMale = document.createElement('option');
+        optMale.value = 'male';
+        optMale.textContent = '👨 日語男聲';
+        select.appendChild(optMale);
 
-            availableVoices.forEach((voice, index) => {
-                const option = document.createElement('option');
-                option.value = String(index);
-                let displayName = voice.name
-                    .replace(/Microsoft |Google |Online \(Natural\) - |Apple |Siri /g, '')
-                    .replace(/Japanese \(Japan\)|ja-JP/gi, '')
-                    .trim();
-                if (!displayName) displayName = `裝置語音 ${index + 1}`;
-                option.textContent = `🗣️ ${displayName}`;
-                select.appendChild(option);
-            });
-        }
+        // 3. 逐一列出手機偵測到的所有日語角色 (如 Kyoko、Otoya、Siri 等)
+        availableVoices.forEach((voice, index) => {
+            const option = document.createElement('option');
+            option.value = String(index);
+            let displayName = voice.name
+                .replace(/Microsoft |Google |Online \(Natural\) - |Apple /g, '')
+                .replace(/Japanese \(Japan\)|ja-JP/gi, '')
+                .trim();
+            if (!displayName) displayName = `日語發音 ${index + 1}`;
+            option.textContent = `🗣️ ${displayName}`;
+            select.appendChild(option);
+        });
 
-        const savedChoice = localStorage.getItem('selected_voice_choice') || 'google';
+        const savedChoice = localStorage.getItem('selected_voice_choice') || 'female';
         for (let i = 0; i < select.options.length; i++) {
             if (select.options[i].value === savedChoice) {
                 select.selectedIndex = i;
@@ -1266,64 +1270,76 @@
         });
     }
 
-    let currentAudioEl = null;
-
     function playAudio() {
         if (!currentQuestion) return;
         stopAudio();
 
-        const textToSpeak = currentQuestion.kanji || currentQuestion.kana;
-        const select = document.getElementById('voice_select');
-        const choice = select ? select.value : 'google';
-
-        // 1. 若選擇 Google 真人語音 (最自然且各裝置皆支援)
-        if (choice === 'google') {
-            playGoogleTTS(textToSpeak);
-            return;
-        }
-
-        // 2. 若選擇手機預設/Siri 或特定裝置語音
-        playWebSpeech(textToSpeak, choice);
-    }
-
-    function playGoogleTTS(text) {
-        const speed = parseFloat(document.getElementById('speed_slider').value) || 0.8;
-        const encoded = encodeURIComponent(text);
-        const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=ja&q=${encoded}`;
-
-        if (!currentAudioEl) {
-            currentAudioEl = new Audio();
-        }
-        currentAudioEl.src = url;
-        currentAudioEl.playbackRate = speed;
-
-        const p = currentAudioEl.play();
-        if (p !== undefined) {
-            p.catch(err => {
-                console.warn("Google TTS 播放受限，自動退回裝置語音:", err);
-                playWebSpeech(text, 'system');
-            });
-        }
-    }
-
-    function playWebSpeech(textToSpeak, choice) {
         if (!('speechSynthesis' in window)) {
             alert("您的裝置或瀏覽器不支援語音合成功能");
             return;
         }
+
         if (window.speechSynthesis.paused) {
             window.speechSynthesis.resume();
         }
 
+        let jaVoices = getJapaneseVoices();
+        if (jaVoices.length === 0) {
+            window.speechSynthesis.getVoices();
+            jaVoices = getJapaneseVoices();
+        }
+
+        const select = document.getElementById('voice_select');
+        const choice = select ? select.value : 'female';
+
+        let targetVoice = null;
+
+        if (choice === 'male') {
+            // 自動尋找日語男聲
+            targetVoice = jaVoices.find(v => 
+                v.name.includes('Otoya') || 
+                v.name.includes('Ichiro') || 
+                v.name.includes('Keita') || 
+                v.name.includes('聲音 2') || 
+                v.name.includes('Voice 2') ||
+                v.name.toLowerCase().includes('male')
+            ) || jaVoices[1] || jaVoices[0];
+        } else if (choice === 'female') {
+            // 自動尋找日語女聲（Kyoko, Siri聲音1, Nanami等）
+            targetVoice = jaVoices.find(v => 
+                v.name.includes('Kyoko') || 
+                v.name.includes('Nanami') || 
+                v.name.includes('Ayumi') || 
+                v.name.includes('聲音 1') || 
+                v.name.includes('Voice 1') || 
+                v.name.includes('Siri')
+            ) || jaVoices[0];
+        } else {
+            const idx = parseInt(choice);
+            if (!isNaN(idx) && jaVoices[idx]) {
+                targetVoice = jaVoices[idx];
+            } else {
+                targetVoice = jaVoices.find(v => v.name === choice) || jaVoices[0];
+            }
+        }
+
+        // 朗讀日語句子
+        const textToSpeak = currentQuestion.kanji || currentQuestion.kana;
         const u = new SpeechSynthesisUtterance(textToSpeak);
+
+        // 核心關鍵：強制指定為日語 ja-JP，並明確綁定日文 Voice
+        // 若不綁定 Voice，手機在繁中系統下會錯誤使用中文語音，導致「只會念漢字」！
         u.lang = 'ja-JP';
+        if (targetVoice) {
+            u.voice = targetVoice;
+            u.lang = targetVoice.lang || 'ja-JP';
+        } else if (jaVoices.length > 0) {
+            u.voice = jaVoices[0];
+            u.lang = jaVoices[0].lang || 'ja-JP';
+        }
+
         const speedSlider = document.getElementById('speed_slider');
         u.rate = speedSlider ? parseFloat(speedSlider.value) : 0.8;
-
-        // 若不是 system，才鎖定特定 voice 物件；若是 system 則不指名 voice，讓 iPhone/Android 自動跑最新下載的 Siri 或高音質聲音！
-        if (choice !== 'system' && choice !== 'google' && availableVoices[choice]) {
-            u.voice = availableVoices[choice];
-        }
 
         // 防止垃圾回收導致行動裝置語音半途中斷 (iOS/Android Safari/Chrome bug fix)
         window._currentUtterance = u;
@@ -1341,10 +1357,6 @@
     }
 
     function stopAudio() { 
-        if (currentAudioEl) {
-            currentAudioEl.pause();
-            currentAudioEl.currentTime = 0;
-        }
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
         }
