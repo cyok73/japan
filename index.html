@@ -734,6 +734,14 @@
     var isAnswered = false;
     var availableVoices = [];
     var availableBanks = ["n5_200.json", "n5_100.json"];
+    var recentQuestionHistory = [];
+    const NO_REPEAT_LIMIT = 50;
+    try {
+        const savedHistory = sessionStorage.getItem("jp_recent_history");
+        if (savedHistory) recentQuestionHistory = JSON.parse(savedHistory);
+    } catch (e) {
+        recentQuestionHistory = [];
+    }
 
     const TOPICS = [
         "超商或超市購物（問袋子、加熱、找零、會員卡）",
@@ -862,6 +870,8 @@
                 if (!backgroundUpdate) {
                     currentQuestion = null;
                     answeredCount = 0;
+                    recentQuestionHistory = [];
+                    try { sessionStorage.removeItem("jp_recent_history"); } catch (e) {}
                     nextQuestion(false);
                 }
                 if (showAlert) alert(`✅ 成功切換到【${filename}】！共載入 ${questions.length} 題。`);
@@ -922,6 +932,8 @@
                     questions = data;
                     currentQuestion = null;
                     answeredCount = 0;
+                    recentQuestionHistory = [];
+                    try { sessionStorage.removeItem('jp_recent_history'); } catch (e) {}
                     localStorage.setItem('jp_questions', JSON.stringify(questions));
                     localStorage.setItem('selected_bank_file', file.name);
                     
@@ -947,6 +959,8 @@
         const currentFile = localStorage.getItem('selected_bank_file') || 'n5_200.json';
         if (confirm(`是否清空舊快取，並重新從「${currentFile}」載入題目？`)) {
             localStorage.removeItem('jp_questions');
+            recentQuestionHistory = [];
+            try { sessionStorage.removeItem('jp_recent_history'); } catch (e) {}
             const ok = await loadSpecificBank(currentFile, false);
             if (!ok) {
                 questions = [...FALLBACK_QUESTIONS];
@@ -1232,11 +1246,48 @@
                 pool = questions;
             }
         }
-        let chosen = pool[Math.floor(Math.random() * pool.length)];
-        if (pool.length > 1 && currentQuestion && chosen.id === currentQuestion.id) {
-            chosen = pool.filter(q => q.id !== currentQuestion.id)[Math.floor(Math.random() * (pool.length - 1))];
+        // 確保 50 題內不出現重複題目（若題庫少於 50 題，則以 pool.length - 1 為上限）
+        const maxRecent = Math.min(NO_REPEAT_LIMIT, Math.max(0, pool.length - 1));
+        const excludeIds = new Set();
+        const excludeKanjis = new Set();
+        let matchCount = 0;
+
+        for (let i = recentQuestionHistory.length - 1; i >= 0; i--) {
+            const h = recentQuestionHistory[i];
+            const matches = pool.some(q => 
+                (h.id !== undefined && q.id === h.id) || 
+                (h.kanji && q.kanji === h.kanji)
+            );
+            if (matches) {
+                if (h.id !== undefined && h.id !== null) excludeIds.add(h.id);
+                if (h.kanji) excludeKanjis.add(h.kanji);
+                matchCount++;
+                if (matchCount >= maxRecent) break;
+            }
         }
+
+        let candidates = pool.filter(q => {
+            if (excludeIds.has(q.id)) return false;
+            if (q.kanji && excludeKanjis.has(q.kanji)) return false;
+            return true;
+        });
+
+        if (candidates.length === 0) {
+            candidates = pool.filter(q => !currentQuestion || q.id !== currentQuestion.id);
+            if (candidates.length === 0) candidates = pool;
+        }
+
+        let chosen = candidates[Math.floor(Math.random() * candidates.length)];
         currentQuestion = chosen;
+
+        // 記錄進最近出題歷史並寫入 sessionStorage
+        recentQuestionHistory.push({ id: chosen.id, kanji: chosen.kanji });
+        if (recentQuestionHistory.length > NO_REPEAT_LIMIT) {
+            recentQuestionHistory.shift();
+        }
+        try {
+            sessionStorage.setItem("jp_recent_history", JSON.stringify(recentQuestionHistory));
+        } catch (e) {}
         refreshDisplay();
         updateStarBtnText();
         updateCounterBadge();
